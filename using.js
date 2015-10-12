@@ -39,11 +39,12 @@ var using = (function () {
     "use strict";
     
     var modules = {}, loadedScripts = {}, dependencies = {}, definitions = {}, dependingOn = {};
-    var runners = [];
+    var runners = [], selectors = {}, runnersCheckInProgress = false;
     
     function updateModule (moduleName) {
         
         var deps = [], depNames = dependencies[moduleName], moduleResult;
+        var currentSelectors = selectors[moduleName];
         
         if (depNames.length === 0) {
             
@@ -60,7 +61,7 @@ var using = (function () {
         else if (allModulesLoaded(depNames)) {
             
             depNames.forEach(function (name) {
-                deps.push(modules[name]);
+                deps.push(select(name, currentSelectors));
             });
             
             moduleResult = definitions[moduleName].apply(undefined, deps);
@@ -74,9 +75,32 @@ var using = (function () {
             dependingOn[moduleName].forEach(updateModule);
         }
         
+        startRunnersCheck();
+    }
+    
+    function startRunnersCheck () {
+        
+        if (runnersCheckInProgress) {
+            return;
+        }
+        
+        runnersCheckInProgress = true;
+        
+        checkRunners();
+    }
+    
+    function checkRunners () {
+        
         runners.forEach(function (runner) {
             runner();
         });
+        
+        if (runners.length) {
+            setTimeout(checkRunners, 20);
+        }
+        else {
+            runnersCheckInProgress = false;
+        }
     }
     
     function allModulesLoaded (moduleNames) {
@@ -92,36 +116,84 @@ var using = (function () {
         return loaded;
     }
     
+    function select (moduleName, selectors) {
+        
+        var moduleSelectors = selectors[moduleName].slice();
+        var mod = modules[moduleName];
+        
+        while (moduleSelectors.length) {
+            
+            if (typeof mod !== "object" || mod === null) {
+                throw new TypeError("Module '" + moduleName + "' has no property '" +
+                    moduleSelectors[moduleName].join("::") + "'.");
+            }
+            
+            mod = mod[moduleSelectors.shift()];
+        }
+        
+        return mod;
+    }
+    
     function using (/* module names */) {
         
-        var moduleNames, capabilityObject;
+        var args, moduleNames, moduleSelectors, capabilityObject;
         
-        moduleNames = [].slice.call(arguments);
+        moduleNames = [];
+        moduleSelectors = {};
+        args = [].slice.call(arguments);
         
-        moduleNames.forEach(function (moduleName) {
+        args.forEach(function (arg, index) {
+            
+            var selector, moduleName;
+            var parts = arg.split("::");
+            var protocolParts = parts[0].split(":");
+            var protocol = protocolParts.length > 1 ? protocolParts[0] : "";
+            
+            parts[0] = protocolParts.length > 1 ? protocolParts[1] : protocolParts[0];
+            
+            selector = parts.slice(1);
+            moduleName = parts[0];
+            
+            if (protocol === "ajax") {
+                moduleNames.push(arg);
+                moduleSelectors[arg] = selector;
+            }
+            else {
+                moduleNames.push(moduleName);
+                moduleSelectors[moduleName] = selector;
+            }
             
             if (!(moduleName in dependencies) && !(moduleName in modules)) {
                 
-                dependencies[moduleName] = [];
-                
-                if (!dependingOn[moduleName]) {
-                    dependingOn[moduleName] = [];
-                }
-                
-                if (moduleName.match(/^ajax:/)) {
-                    using.ajax(using.ajax.HTTP_METHOD_GET, moduleName.replace(/^ajax:/, ""),
+                if (protocol === "ajax") {
+                    
+                    dependencies[arg] = [];
+                    
+                    if (!dependingOn[arg]) {
+                        dependingOn[arg] = [];
+                    }
+                    
+                    using.ajax(using.ajax.HTTP_METHOD_GET, arg.replace(/^ajax:/, ""),
                         null, ajaxResourceSuccessFn, ajaxResourceSuccessFn);
                 }
                 else {
+                    
+                    dependencies[moduleName] = [];
+                    
+                    if (!dependingOn[moduleName]) {
+                        dependingOn[moduleName] = [];
+                    }
+                    
                     loadModule(moduleName);
                 }
             }
             
             function ajaxResourceSuccessFn (request) {
-                modules[moduleName] = request;
-                dependingOn[moduleName].forEach(updateModule);
+                modules[arg] = request;
+                dependingOn[arg].forEach(updateModule);
             }
         });
+        
         
         capabilityObject = {
             run: run,
@@ -137,6 +209,8 @@ var using = (function () {
                 runners.push(runner);
             }
             
+            startRunnersCheck();
+            
             return capabilityObject;
             
             function runner (doNotRemove) {
@@ -146,7 +220,7 @@ var using = (function () {
                 if (allModulesLoaded(moduleNames)) {
                     
                     moduleNames.forEach(function (name) {
-                        deps.push(modules[name]);
+                        deps.push(select(name, moduleSelectors));
                     });
                     
                     callback.apply(undefined, deps);
@@ -170,6 +244,7 @@ var using = (function () {
             
             definitions[moduleName] = callback;
             dependencies[moduleName] = moduleNames;
+            selectors[moduleName] = moduleSelectors;
             
             if (!dependingOn[moduleName]) {
                 dependingOn[moduleName] = [];
