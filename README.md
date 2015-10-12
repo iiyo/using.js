@@ -29,6 +29,22 @@ Running some code after loading its dependencies:
         console.log(dep3());
     });
 
+If a module returns an object, its properties can be referenced as dependencies, too:
+
+    using().define("data", function () {
+        return {
+            userName: "user001",
+            profile: {
+                firstName: "John",
+                lastName: "Doe"
+            }
+        };
+    });
+    
+    using("data::userName", "data::profile::lastName").run(function (userName, lastName) {
+        console.log(userName, lastName);
+    });
+
 Loading a file via AJAX as a dependency:
 
     using("ajax:myFile.json").run(function (myFileRequest) {
