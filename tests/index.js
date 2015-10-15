@@ -4,7 +4,7 @@ using.modules.module1 = "module1.js";
 using.modules.module2 = "module2.js";
 using.modules.module3 = "module3.js";
 
-var tests = 9;
+var tests = 11;
 var count = 0;
 
 
@@ -52,6 +52,20 @@ using("module3").run(function (module3) {
 using("module3::foo").run(function (foo) {
     count += 1;
     console.log("Property 'foo' of module 'module3' loaded successfully:", foo);
+});
+
+using("module3::what", "module3::foo").run(function (what, foo) {
+    count += 1;
+    console.log("Property 'what' and 'foo' of module 'module3' loaded successfully:", what, foo);
+});
+
+using("module3::what", "module3::foo").define("module4", function (what, foo) {
+    count += 1;
+    console.log("Properties 'what', 'foo' of module 'module3' loaded successfully (2):", what, foo);
+    return {
+        what: what,
+        foo: foo
+    };
 });
 
 using("module3::foo::bar").run(function (bar) {

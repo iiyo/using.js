@@ -46,6 +46,10 @@ var using = (function () {
         var deps = [], depNames = dependencies[moduleName], moduleResult;
         var currentSelectors = selectors[moduleName];
         
+        if (modules[moduleName]) {
+            return;
+        }
+        
         if (depNames.length === 0) {
             
             moduleResult = definitions[moduleName]();
@@ -60,8 +64,10 @@ var using = (function () {
         }
         else if (allModulesLoaded(depNames)) {
             
-            depNames.forEach(function (name) {
-                deps.push(select(name, currentSelectors));
+            //console.log("currentSelectors, depNames:", currentSelectors, depNames);
+            
+            depNames.forEach(function (name, i) {
+                deps.push(select(name, currentSelectors[i]));
             });
             
             moduleResult = definitions[moduleName].apply(undefined, deps);
@@ -118,17 +124,25 @@ var using = (function () {
     
     function select (moduleName, selectors) {
         
-        var moduleSelectors = selectors[moduleName].slice();
-        var mod = modules[moduleName];
+        var argSelectors, mod;
         
-        while (moduleSelectors.length) {
+        mod = modules[moduleName];
+        
+        if (!selectors) {
+            console.log("Module has no selectors:", moduleName);
+            return mod;
+        }
+        
+        argSelectors = selectors.slice();
+        
+        while (argSelectors.length) {
             
             if (typeof mod !== "object" || mod === null) {
                 throw new TypeError("Module '" + moduleName + "' has no property '" +
-                    moduleSelectors[moduleName].join("::") + "'.");
+                    argSelectors.join("::") + "'.");
             }
             
-            mod = mod[moduleSelectors.shift()];
+            mod = mod[argSelectors.shift()];
         }
         
         return mod;
@@ -139,7 +153,7 @@ var using = (function () {
         var args, moduleNames, moduleSelectors, capabilityObject;
         
         moduleNames = [];
-        moduleSelectors = {};
+        moduleSelectors = [];
         args = [].slice.call(arguments);
         
         args.forEach(function (arg, index) {
@@ -156,12 +170,12 @@ var using = (function () {
             
             if (protocol === "ajax") {
                 moduleNames.push(arg);
-                moduleSelectors[arg] = selector;
             }
             else {
                 moduleNames.push(moduleName);
-                moduleSelectors[moduleName] = selector;
             }
+            
+            moduleSelectors.push(selector);
             
             if (!(moduleName in dependencies) && !(moduleName in modules)) {
                 
@@ -219,8 +233,10 @@ var using = (function () {
                 
                 if (allModulesLoaded(moduleNames)) {
                     
-                    moduleNames.forEach(function (name) {
-                        deps.push(select(name, moduleSelectors));
+                    //console.log("moduleSelectors, moduleNames:", moduleSelectors, moduleNames);
+                    
+                    moduleNames.forEach(function (name, i) {
+                        deps.push(select(name, moduleSelectors[i]));
                     });
                     
                     callback.apply(undefined, deps);
