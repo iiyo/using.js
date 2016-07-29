@@ -255,7 +255,7 @@ var using = (function () {
         function define (moduleName, callback) {
             
             if (exists(moduleName)) {
-                throw new Error("Module '" + moduleName + "' is already defined.");
+                console.warn("Module '" + moduleName + "' is already defined.");
             }
             
             definitions[moduleName] = callback;
