@@ -254,7 +254,7 @@ var using = (function () {
         
         function define (moduleName, callback) {
             
-            if (moduleName in definitions) {
+            if (exists(moduleName)) {
                 throw new Error("Module '" + moduleName + "' is already defined.");
             }
             
@@ -282,6 +282,11 @@ var using = (function () {
         }
     }
     
+    function exists (name) {
+        return name in definitions;
+    }
+    
+    using.exists = exists;
     using.path = "";
     
     (function () {
