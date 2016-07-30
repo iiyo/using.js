@@ -41,6 +41,16 @@ var using = (function () {
     var modules = {}, loadedScripts = {}, dependencies = {}, definitions = {}, dependingOn = {};
     var runners = [], selectors = {}, runnersCheckInProgress = false;
     
+    var getAbsoluteUrl = (function () {
+        
+        var a = document.createElement('a');
+        
+        return function (url) {
+            a.href = url;
+            return a.href;
+        };
+    }());
+    
     function updateModule (moduleName) {
         
         var deps = [], depNames = dependencies[moduleName], moduleResult;
@@ -311,6 +321,8 @@ var using = (function () {
     
     using.loadScript = function (url) {
         
+        url = getAbsoluteUrl(url);
+        
         var script = document.createElement("script");
         var scriptId = "using_script_" + url;
         
@@ -323,6 +335,7 @@ var using = (function () {
         script.src = url;
         
         document.body.appendChild(script);
+        loadedScripts[url] = true;
     };
     
     return using;
