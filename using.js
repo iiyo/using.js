@@ -256,6 +256,7 @@ var using = (function () {
             
             if (exists(moduleName)) {
                 console.warn("Module '" + moduleName + "' is already defined.");
+                return capabilityObject;
             }
             
             definitions[moduleName] = callback;
