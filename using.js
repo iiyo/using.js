@@ -324,19 +324,35 @@ var using = (function () {
         url = getAbsoluteUrl(url);
         
         var script = document.createElement("script");
-        var scriptId = "using_script_" + url;
         
-        if (loadedScripts[url] || document.getElementById(scriptId)) {
+        if (loadedScripts[url] || scriptExists(url)) {
             return;
         }
         
-        script.setAttribute("id", scriptId);
+        script.setAttribute("data-inserted-by", "using.js");
         
         script.src = url;
+        loadedScripts[url] = true;
         
         document.body.appendChild(script);
-        loadedScripts[url] = true;
     };
+    
+    function scriptExists (url) {
+        
+        var exists = false;
+        var scripts = document.getElementsByTagName("script");
+        
+        [].forEach.call(scripts, function (script) {
+            
+            var src = script.getAttribute("src");
+            
+            if (src && getAbsoluteUrl(src) === url) {
+                exists = true;
+            }
+        });
+        
+        return exists;
+    }
     
     return using;
     
